@@ -105,6 +105,8 @@ namespace rvt2dki
     /// </summary>
     private void DeleteAllCuttingElements(Document doc)
     {
+      FilteredElementCollector collector = new FilteredElementCollector(doc);
+
       // (Type == FamilyInstance && (Category == Door || Category == Window) || Type == Opening
       ElementClassFilter filterFamilyInstance = new ElementClassFilter(typeof(FamilyInstance));
       ElementCategoryFilter filterWindowCategory = new ElementCategoryFilter(BuiltInCategory.OST_Windows);
@@ -115,20 +117,26 @@ namespace rvt2dki
       ElementClassFilter filterOpening = new ElementClassFilter(typeof(Opening));
 
       LogicalOrFilter filterCuttingElements = new LogicalOrFilter(filterOpening, filterDoorWindowInstance);
-      FilteredElementCollector collector = new FilteredElementCollector(doc).WherePasses(filterCuttingElements);
 
-      foreach (Element e in collector)
+      // Must convert to list, because we cannot iterate
+      // over the collector and delete elements at the same time
+
+      ICollection<Element> cuttingElementsList = collector.WherePasses(filterCuttingElements).ToElements();
+
+      foreach (Element e in cuttingElementsList)
       {
-        // Doors in curtain grid systems cannot be deleted.  This doesn't actually affect the calculations because
+        // Doors in curtain grid systems cannot be deleted.
+        // This doesn't actually affect the calculations because
         // material quantities are not extracted for curtain systems.
+
         if (e.Category != null)
         {
           if (e.Category.BuiltInCategory == BuiltInCategory.OST_Doors)
           {
             FamilyInstance door = e as FamilyInstance;
-            Wall host = door.Host as Wall;
+            Element host = door.Host;
 
-            if (host.CurtainGrid != null)
+            if (null != host && host is Wall && ((Wall)host).CurtainGrid != null)
               continue;
           }
           ICollection<ElementId> deletedElements = doc.Delete(e.Id);
@@ -136,6 +144,7 @@ namespace rvt2dki
           // Log failed deletion attempts to the output.
           // There may be other situations where deletion is not possible
           // but the failure doesn't really affect the results.
+
           if (deletedElements == null || deletedElements.Count < 1)
           {
             Debug.Print("The tool was unable to delete the {0} named {2} (id {1})", 
@@ -144,6 +153,5 @@ namespace rvt2dki
         }
       }
     }
-
   }
 }
