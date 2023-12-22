@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Text>Command rvt2dki</Text>
+    <Description>Some description for rvt2dki</Description>
+    <Assembly>rvt2dki.dll</Assembly>
+    <FullClassName>rvt2dki.Command</FullClassName>
+    <ClientId>f1c8b757-1bf9-461e-91d3-bbd577e1bc6e</ClientId>
+    <VendorId>com.typepad.thebuildingcoder</VendorId>
+    <VendorDescription>The Building Coder, http://thebuildingcoder.typepad.com</VendorDescription>
+  </AddIn>
+</RevitAddIns>
