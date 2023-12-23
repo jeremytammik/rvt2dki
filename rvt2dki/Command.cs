@@ -5,6 +5,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 #endregion
 
 namespace rvt2dki
@@ -33,6 +34,8 @@ namespace rvt2dki
 
       Dictionary<ElementId, ElementArea> elAreas
         = new Dictionary<ElementId, ElementArea>();
+
+      // Determine net wall, floor and roof areas
 
       FilteredElementCollector walls
         = new FilteredElementCollector(doc)
@@ -79,6 +82,8 @@ namespace rvt2dki
         elAreas.Add(e.Id, elarea);
       }
 
+      // Determine gross wall and roof areas
+
       using (Transaction tx = new Transaction(doc))
       {
         tx.Start("Delete openings for gross wall and roof area determination");
@@ -97,6 +102,36 @@ namespace rvt2dki
           elAreas[e.Id].AreaGross = a;
         }
         tx.RollBack();
+      }
+
+      // Sort results
+
+      SortedDictionary<string, List<ElementArea>> resultAreas
+        = new SortedDictionary<string, List<ElementArea>>();
+
+      foreach (ElementArea ea in elAreas.Values)
+      {
+        string c = ea.Comment;
+        if(null == c)
+        {
+          c = "<nil>";
+        }
+        if(!resultAreas.ContainsKey(c))
+        {
+          resultAreas[c] = new List<ElementArea>();
+        }
+        resultAreas[c].Add(ea);
+      }
+
+      // Print results
+
+      foreach (string key in resultAreas.Keys)
+      {
+        int n = resultAreas[key].Count;
+        List<ElementArea> eas = resultAreas[key];
+        double anet = eas.Sum<ElementArea>(ea => ea.AreaNet);
+        double agross = eas.Sum<ElementArea>(ea => ea.AreaGross);
+        Debug.Print($"{key}: {n} elements, area gross/net {agross * foot2:0.0}/{anet * foot2:0.0}");
       }
 
       return Result.Succeeded;
