@@ -14,6 +14,9 @@ namespace rvt2dki
   {
     const BuiltInParameter bipArea
       = BuiltInParameter.HOST_AREA_COMPUTED;
+    const BuiltInParameter bipComment
+      = BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS;
+
     const double inch = 0.0254; // metres
     const double foot = 12 * inch;
     const double foot2 = foot * foot;
@@ -28,7 +31,7 @@ namespace rvt2dki
       Application app = uiapp.Application;
       Document doc = uidoc.Document;
 
-      Dictionary<ElementId, ElementArea> wallAreas
+      Dictionary<ElementId, ElementArea> elAreas
         = new Dictionary<ElementId, ElementArea>();
 
       FilteredElementCollector walls
@@ -40,27 +43,11 @@ namespace rvt2dki
       foreach (Element e in walls)
       {
         double a = e.get_Parameter(bipArea).AsDouble();
-        Debug.Print($"{e.Name}: net {(a * foot2):#0.00}");
-        ElementArea elarea = new ElementArea(e.Id.Value, a);
-        wallAreas.Add(e.Id, elarea);
+        string c = e.get_Parameter(bipComment).AsString();
+        Debug.Print($"{c} - {e.Name}: net {(a * foot2):#0.00}");
+        ElementArea elarea = new ElementArea(e.Id.Value, c, a);
+        elAreas.Add(e.Id, elarea);
       }
-
-      using (Transaction tx = new Transaction(doc))
-      {
-        tx.Start("Delete openings for gross wall area determination");
-        DeleteAllCuttingElements(doc);
-        doc.Regenerate();
-        foreach (Element e in walls)
-        {
-          double a = e.get_Parameter(bipArea).AsDouble();
-          Debug.Print($"{e.Name}: gross {(a * foot2):#0.00}");
-          wallAreas[e.Id].AreaGross = a;
-        }
-        tx.RollBack();
-      }
-
-      Dictionary<ElementId, ElementArea> floorAreas
-        = new Dictionary<ElementId, ElementArea>();
 
       FilteredElementCollector floors
         = new FilteredElementCollector(doc)
@@ -71,13 +58,11 @@ namespace rvt2dki
       foreach (Element e in floors)
       {
         double a = e.get_Parameter(bipArea).AsDouble();
-        Debug.Print($"{e.Name}: {(a * foot2):#0.00}");
-        ElementArea elarea = new ElementArea(e.Id.Value, a);
-        wallAreas.Add(e.Id, elarea);
+        string c = e.get_Parameter(bipComment).AsString();
+        Debug.Print($"{c} - {e.Name}: net {(a * foot2):#0.00}");
+        ElementArea elarea = new ElementArea(e.Id.Value, c, a);
+        elAreas.Add(e.Id, elarea);
       }
-
-      Dictionary<ElementId, ElementArea> roofAreas
-        = new Dictionary<ElementId, ElementArea>();
 
       FilteredElementCollector roofs
         = new FilteredElementCollector(doc)
@@ -88,11 +73,32 @@ namespace rvt2dki
       foreach (Element e in roofs)
       {
         double a = e.get_Parameter(bipArea).AsDouble();
-        Debug.Print($"{e.Name}: {(a * foot2):#0.00}");
-        ElementArea elarea = new ElementArea(e.Id.Value, a);
-        roofAreas.Add(e.Id, elarea);
-
+        string c = e.get_Parameter(bipComment).AsString();
+        Debug.Print($"{c} - {e.Name}: net {(a * foot2):#0.00}");
+        ElementArea elarea = new ElementArea(e.Id.Value, c, a);
+        elAreas.Add(e.Id, elarea);
       }
+
+      using (Transaction tx = new Transaction(doc))
+      {
+        tx.Start("Delete openings for gross wall and roof area determination");
+        DeleteAllCuttingElements(doc);
+        doc.Regenerate();
+        foreach (Element e in walls)
+        {
+          double a = e.get_Parameter(bipArea).AsDouble();
+          Debug.Print($"{e.Name}: gross {(a * foot2):#0.00}");
+          elAreas[e.Id].AreaGross = a;
+        }
+        foreach (Element e in roofs)
+        {
+          double a = e.get_Parameter(bipArea).AsDouble();
+          Debug.Print($"{e.Name}: gross {(a * foot2):#0.00}");
+          elAreas[e.Id].AreaGross = a;
+        }
+        tx.RollBack();
+      }
+
       return Result.Succeeded;
     }
 
